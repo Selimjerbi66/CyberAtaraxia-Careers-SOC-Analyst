@@ -24,15 +24,15 @@
 
 **CyberAtaraxia Careers** is a new line within the CyberAtaraxia Suite: guided, hands-on **career paths** rather than single tools — each one designed to take a beginner from zero to a demonstrable, portfolio-ready skillset using only free and open-source resources.
 
-**SOC Analyst** is the first entry in this line. It's not a course you read — it's a project you *run*: you build a small home SOC, attack your own lab safely, and then chase that attack through every stage a real Tier 1/2 SOC analyst would — detection, hunting, incident response, forensics, malware/phishing analysis, and threat intelligence — ending with a real, written incident report.
+**SOC Analyst** is the first entry in this line. It's not a course you read — it's a project you *run*: you build a small home lab, attack your own machine (via Atomic Red Team simulations), and then chase that attack through every stage a real Tier 1/2 SOC analyst would — detection, hunting, incident response, forensics, malware/phishing analysis, and threat intelligence — ending with a real, written incident report.
 
-No cybersecurity background required. No paid tools. No cloud subscriptions.
+No cybersecurity background required. No paid tools. No cloud subscriptions. **No central SIEM server required** — this path uses lightweight, file-based detection tools instead, so the whole lab fits in just 3 VMs.
 
 ---
 
 ## 🎯 Main Goal
 
-Take you from beginner to someone with **hands-on, practical reps across nearly the entire blue team pipeline** — not just reading about SIEM, MITRE ATT&CK, forensics, and IR, but actually doing each one against real (safely simulated) attacks, end to end:
+Take you from beginner to someone with **hands-on, practical reps across nearly the entire blue team pipeline** — not just reading about detection engineering, MITRE ATT&CK, forensics, and IR, but actually doing each one against real (safely simulated) attacks, end to end:
 
 > detect something → hunt for it → respond to it → investigate it → write it up
 
@@ -44,8 +44,8 @@ Everything is built around **one continuous storyline** rather than disconnected
 
 | # | Deliverable | What it proves |
 |---|---|---|
-| 1 | A working **home SOC lab** (Windows/Linux victims + Kali attacker + Wazuh/Security Onion SIEM), isolated from your real network | You can stand up a monitored environment from scratch |
-| 2 | Custom **Sigma detection rules**, tuned and mapped to MITRE ATT&CK techniques | You can go from "no visibility" to "detected and mapped" |
+| 1 | A working **home lab** (Windows + Linux + Kali attacker) — just 3 VMs, isolated from your real network | You can stand up a monitored environment from scratch, without needing heavy infrastructure |
+| 2 | Custom **Sigma detection rules**, tuned and mapped to MITRE ATT&CK techniques, run with a lightweight local engine | You can go from "no visibility" to "detected and mapped" without a SIEM |
 | 3 | One fully **documented incident** — triaged, contained, investigated (memory dump, disk artifacts, timeline, IOCs) | You can run the full IR lifecycle, not just talk about it |
 | 4 | Two incident write-ups (technical + executive) and a reusable **playbook** | You can communicate to both engineers and management |
 | 5 | A **GitHub repo** with your rules, notebook, report, and playbook | A concrete artifact to show in interviews |
@@ -58,7 +58,7 @@ This isn't "I learned some tools" — it's a live, demonstrable lab plus one pol
 
 | Item | Needed? | Notes |
 |---|---|---|
-| **PC / host machine** | Required | 16GB RAM min (32GB comfortable), 250GB+ free storage. Runs your hypervisor of choice — ESXi, VirtualBox, or Proxmox all work fine for this program. Lower spec? See *Low-Spec Mode* below. |
+| **PC / host machine** | Required | 8–16GB RAM workable (16GB comfortable), **~80–100GB free storage is enough** since there's no SIEM server VM. Runs your hypervisor of choice — ESXi, VirtualBox, or Proxmox all work fine for this program. Lower spec? See *Low-Spec Mode* below. |
 | **Router + Switch** | Optional | Only useful if you want to physically segment the lab from your home LAN. Not required — see *Networking, No Firewall Appliance Needed* below. |
 | **Everything else** | Free | 100% open-source software (see below). |
 
@@ -70,29 +70,31 @@ Earlier drafts of this plan included pfSense as a virtual router/firewall for re
 
 **What to do instead:**
 - Create one **isolated internal network** for your lab — in ESXi this is a vSwitch/port group with **no physical uplink** (no NIC attached to it); in VirtualBox use "Internal Network" mode; in Proxmox use a Linux bridge with no physical interface attached.
-- Put every VM (Windows victim, Ubuntu victim, Kali attacker, SIEM) on that same isolated network with static private IPs (e.g. `10.10.10.10/24`, `.20`, `.30`, `.40`).
-- You'll need internet access briefly during setup (OS updates, installing Wazuh packages, downloading Atomic Red Team, Sysmon configs, Sigma tooling). Two easy ways to handle this without a firewall VM:
+- Put every VM (Windows victim, Ubuntu victim, Kali attacker) on that same isolated network with static private IPs (e.g. `10.10.10.10/24`, `.20`, `.30`).
+- You'll need internet access briefly during setup (OS updates, installing Sysmon/Zircolite, downloading Atomic Red Team, Sigma rules). Two easy ways to handle this without a firewall VM:
   - Temporarily attach a VM to a NAT/bridged network to download what you need, then move its virtual NIC back to the isolated internal network before running any attack simulation.
   - Or keep a **separate "staging" port group** with internet access purely for downloads, and only move VMs to the isolated segment once they're fully patched and provisioned.
-- **Take a clean snapshot of every VM immediately after this initial setup.** This is your single most important safety net for the whole two weeks — you will want to roll back after the malware analysis day and after the incident simulation.
+- **Take a clean snapshot of every VM immediately after this initial setup.** This is your single most important safety net for the whole two weeks — you will want to roll back after the malware analysis day and after the incident simulation. To save disk space, keep only **one active snapshot per VM** at a time (consolidate/delete older ones once a day's work is documented), and provision virtual disks **thin-provisioned** rather than thick.
 - If you later want the "real infrastructure" feel of a virtual router/firewall in the traffic path, **OPNsense** is a lighter, often easier install than pfSense and can be added as a nice-to-have upgrade once the core lab is stable — never a Day 1 blocker.
 
 ---
 
-## 🛠️ Tools Used (all free)
+## 🛠️ Tools Used (all free, no server/agent stack required)
 
 - **Hypervisor:** ESXi, VirtualBox, or Proxmox — whichever you can get running reliably
-- **SIEM:** Wazuh (lighter, recommended if this is your first SIEM) or Security Onion (heavier, includes Zeek/Suricata/ATT&CK mapping built in)
-- **Endpoint visibility:** Sysmon (Windows) with a community config (e.g. SwiftOnSecurity's or Olaf Hartong's `sysmon-modular`), auditd (Linux)
-- **Detection rules:** Sigma (+ `sigma-cli`/pySigma for conversion)
+- **Endpoint visibility:** Sysmon (Windows) with a community config (e.g. SwiftOnSecurity's or Olaf Hartong's `sysmon-modular`), auditd (Linux) — logs stay local, exported on demand instead of streamed to a SIEM
+- **Detection engine (no server needed):** **Zircolite** — runs Sigma rules directly against exported EVTX/JSON logs from your own machine, no manager, no agent, no indexing cluster. **Chainsaw** or **Hayabusa** are drop-in alternatives if you want to compare tools
+- **Detection rules:** Sigma (rules used natively by Zircolite — no format conversion needed)
 - **ATT&CK mapping:** MITRE ATT&CK Navigator (web-based, free)
 - **Attack simulation:** Atomic Red Team (`Invoke-AtomicRedTeam` PowerShell module)
 - **Forensics:** KAPE, Autopsy, Volatility 3, Magnet RAM Capture or DumpIt (memory acquisition), FTK Imager Lite (disk imaging)
-- **Network analysis:** Wireshark, Zeek, Suricata (with the free ET Open ruleset)
+- **Network analysis:** Wireshark, Zeek, Suricata (with the free ET Open ruleset) — run temporarily on the Kali VM when needed, no dedicated monitoring VM required
 - **Malware analysis:** PEStudio, `strings`/`sha256sum`, Process Monitor/Process Explorer/Autoruns, an isolated sandbox VM
 - **Threat intel/OSINT:** VirusTotal, AbuseIPDB, AlienVault OTX
-- **Case management:** TheHive (optional) or a structured markdown log
+- **Case management:** A structured markdown log (TheHive dropped — another server you don't need for this path)
 - **Documentation:** Obsidian / plain markdown "SOC notebook"
+
+> 💾 **Why this matters for storage:** dropping the SIEM manager/agent stack removes the single biggest disk consumer in the original plan (constant log indexing + a dedicated server VM). Zircolite itself is a single binary under 50MB, and you only keep the small JSON output — not the raw exported logs — once you've reviewed a day's results.
 
 ---
 
@@ -101,11 +103,10 @@ Earlier drafts of this plan included pfSense as a virtual router/firewall for re
 ```
 [Attacker VM: Kali]  ─┐
 [Victim VM: Windows]  ─┼──  isolated internal vSwitch / port group (no physical uplink)
-[Victim VM: Ubuntu]   ─┤
-[SIEM VM: Wazuh]      ─┘
+[Victim VM: Ubuntu]   ─┘
 ```
 
-No virtual router required for this path — all VMs sit on one flat, isolated network segment. Static IPs, no internet once provisioning is done.
+Just 3 VMs, one flat isolated network segment, static IPs, no internet once provisioning is done. No SIEM/server VM. Detection happens **on-demand**: export logs from Windows/Ubuntu after a simulation, run Zircolite against them (from any of the 3 VMs, or your host machine if you install it there), review the JSON output, then delete the raw export.
 
 ---
 
@@ -116,56 +117,57 @@ No virtual router required for this path — all VMs sit on one flat, isolated n
 
 - Install/confirm your hypervisor is stable (ESXi/VirtualBox/Proxmox).
 - Create the isolated internal network (vSwitch/port group with no uplink, or "Internal Network" mode in VirtualBox).
-- Provision three VMs on a temporary internet-connected segment first: **Windows 10/11**, **Ubuntu Server 22.04**, **Kali Linux**. Fully patch each one.
+- Provision three VMs on a temporary internet-connected segment first: **Windows 10/11**, **Ubuntu Server 22.04**, **Kali Linux**. Fully patch each one. Create their virtual disks **thin-provisioned**.
 - Assign static IPs once provisioned (e.g. `10.10.10.10` Windows, `.20` Ubuntu, `.30` Kali), then move all three VMs' virtual NICs onto the isolated segment.
 - Verify connectivity: `ping` between all three VMs; confirm no VM can reach the real internet from the isolated segment.
-- **Snapshot every VM now** — label it clearly, e.g. `clean-baseline-day1`.
+- **Snapshot every VM now** — label it clearly, e.g. `clean-baseline-day1`. This is your only active snapshot per VM for now.
 - Draw your network diagram (IPs, VM roles) into your SOC notebook.
 
 **Covers:** SOC architecture basics, network fundamentals
 </details>
 
 <details>
-<summary><strong>Day 2 — SIEM Stand-Up</strong></summary>
+<summary><strong>Day 2 — Log Sources & Local Detection Engine Setup</strong></summary>
 
-- Deploy Wazuh: either the official Wazuh OVA (if your hypervisor supports OVA import) or a manual all-in-one install on the Ubuntu VM (`wazuh-install.sh` quickstart script — needs the temporary internet segment).
-- Install the Wazuh agent on both the Windows and (a second) Ubuntu victim VM; register them against the Wazuh manager.
 - Install **Sysmon** on the Windows VM with a community config (`sysmon64.exe -i sysmonconfig.xml`) — this is what gives you rich process/network/registry telemetry instead of default Windows logging.
-- Configure **auditd** rules on Linux to watch key files and syscalls, e.g.:
+- Configure **auditd** rules on the Ubuntu VM to watch key files and syscalls, e.g.:
   ```
   -w /etc/passwd -p wa -k identity
   -w /etc/shadow -p wa -k identity
   -a always,exit -F arch=b64 -S execve -k exec
   ```
-- Verify in the Wazuh dashboard: **Agents → both show "Active"**; **Discover** tab shows structured fields (e.g. `data.win.eventdata.image`), not raw unparsed text.
-- Move both victim VMs back to the isolated segment once agents are confirmed reporting.
+- Limit log growth so nothing eats your disk: cap Windows Event Log channel sizes (`wevtutil sl <log> /ms:<bytes>`, e.g. 50–100MB per channel instead of the default) and configure auditd rotation in `/etc/audit/auditd.conf` (`max_log_file`, `num_logs`).
+- Install **Zircolite** (single binary, download from GitHub releases) — no install needed beyond that, and no agent to deploy on the victim VMs.
+- Do a first test: export the Windows Security/Sysmon channels to EVTX (`wevtutil epl Microsoft-Windows-Sysmon/Operational sysmon_export.evtx`), run Zircolite against it with a default Sigma ruleset, and confirm you get a JSON output with matches.
+- Move both victim VMs back to the isolated segment once telemetry is confirmed flowing into local logs.
 
-**Covers:** SIEM fundamentals, log sources, data normalization
+**Covers:** SIEM-equivalent fundamentals, log sources, data normalization — without a SIEM server
 </details>
 
 <details>
-<summary><strong>Day 3 — Queries & Dashboards</strong></summary>
+<summary><strong>Day 3 — Manual Queries & Log Review</strong></summary>
 
-- Learn Wazuh's query bar syntax (Lucene-style) using these starter queries:
-  - Failed logons: `data.win.system.eventID:4625`
-  - Successful logons: `data.win.system.eventID:4624`
-  - Process creation (Sysmon Event ID 1): `data.win.system.eventID:1`
-  - Network connection (Sysmon Event ID 3): `data.win.system.eventID:3`
-- Build **3 dashboards** in Wazuh's Visualize section: (1) failed logons over time by source, (2) top process creations by parent/child image, (3) outbound network connections timeline.
-- Save each search with a clear name (`auth-failures`, `proc-creation-all`, `netconn-all`) so you can reuse them during hunting later.
+- Learn to query exported logs directly instead of a dashboard. On Windows, use `Get-WinEvent` with XPath filters, e.g.:
+  - Failed logons: `Get-WinEvent -LogName Security -FilterXPath "*[System[EventID=4625]]"`
+  - Successful logons: `Get-WinEvent -LogName Security -FilterXPath "*[System[EventID=4624]]"`
+  - Process creation (Sysmon Event ID 1): `Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -FilterXPath "*[System[EventID=1]]"`
+  - Network connection (Sysmon Event ID 3): same log, `EventID=3`
+- On Ubuntu, use `ausearch -k identity` / `ausearch -k exec` to pull the equivalent auditd events.
+- Instead of Wazuh-style dashboards, build **3 saved review routines** in your SOC notebook: (1) failed logons by source, (2) process creations by parent/child image, (3) outbound connections timeline — each just a saved PowerShell/`ausearch` one-liner plus a note on what "normal" looks like.
+- Export a small sample of each into CSV (`Export-Csv`) so you have something concrete to reuse during hunting later, then delete the raw EVTX exports to save space.
 
-**Covers:** Basic SIEM queries, dashboards & visualization
+**Covers:** Basic log analysis, manual "query" equivalents, baseline documentation
 </details>
 
 <details>
 <summary><strong>Day 4 — MITRE ATT&CK Mapping</strong></summary>
 
 - Install the `Invoke-AtomicRedTeam` PowerShell module on the Windows victim.
-- Run these specific tests one at a time, checking Wazuh after each:
+- Run these specific tests one at a time, exporting the relevant log channel and checking with Zircolite (or a manual `Get-WinEvent` query) after each:
   - `Invoke-AtomicTest T1059.001 -TestNumbers 1` (PowerShell execution)
   - `Invoke-AtomicTest T1003.001 -TestNumbers 1` (LSASS credential dumping simulation)
   - `Invoke-AtomicTest T1547.001 -TestNumbers 1` (Registry Run Key persistence)
-- For each test, find the matching event(s) in Wazuh (Sysmon Event ID 1 for process creation, Event ID 10 for process access on the LSASS test, Event ID 13 for registry value set on the persistence test).
+- For each test, find the matching event(s): Sysmon Event ID 1 for process creation, Event ID 10 for process access on the LSASS test, Event ID 13 for registry value set on the persistence test.
 - Open the **MITRE ATT&CK Navigator** (mitre-attack.github.io/attack-navigator), create a new layer, and color each tested technique: green = detected, red = no visibility.
 
 **Covers:** ATT&CK framework, technique mapping, blind-spot identification
@@ -187,9 +189,9 @@ No virtual router required for this path — all VMs sit on one flat, isolated n
     condition: selection
   level: high
   ```
-- Convert it into Wazuh's rule format (either manually into `/var/ossec/etc/rules/local_rules.xml`, or via `sigma-cli` with a Wazuh/OpenSearch backend if available).
-- Re-run the corresponding Atomic test from Day 4 and confirm the new alert fires at the expected level.
-- **Tune one rule**: find a legitimate action triggering a false positive (e.g. an antivirus scanner also accessing LSASS) and add an exclusion condition.
+- Drop the rule straight into your Zircolite rules folder — **no conversion needed**, Zircolite consumes Sigma natively.
+- Re-run the corresponding Atomic test from Day 4, export the relevant log, run Zircolite, and confirm the new match appears at the expected level.
+- **Tune one rule**: find a legitimate action triggering a false positive (e.g. an antivirus scanner also accessing LSASS) and add an exclusion condition to the Sigma rule.
 
 **Covers:** Detection engineering, baselining, tuning
 </details>
@@ -197,10 +199,10 @@ No virtual router required for this path — all VMs sit on one flat, isolated n
 <details>
 <summary><strong>Day 6 — Threat Hunting</strong></summary>
 
-- Hypothesis 1: *"An attacker is using LOLBins to download files."* Hunt query: search for `certutil.exe` with `urlcache` or `-decode` in the command line.
-- Hypothesis 2: *"There's PowerShell activity outside normal working hours."* Hunt query: process creation events for `powershell.exe`, filtered to outside 09:00–17:00.
+- Hypothesis 1: *"An attacker is using LOLBins to download files."* Hunt query: export process creation logs, `grep`/`Select-String` for `certutil.exe` with `urlcache` or `-decode` in the command line.
+- Hypothesis 2: *"There's PowerShell activity outside normal working hours."* Hunt query: export `powershell.exe` process creation events, filter to outside 09:00–17:00 in your spreadsheet/CSV.
 - Use a structured hunt log template for each: **Hypothesis → Data sources used → Query run → Findings → Verdict (confirmed/ruled out)**.
-- Turn at least one confirmed finding into a new Sigma detection rule so it's caught automatically next time.
+- Turn at least one confirmed finding into a new Sigma rule dropped into your Zircolite ruleset, so it's caught automatically next time you export and scan logs.
 
 **Covers:** Hypothesis-driven hunting, hunt execution, IOC-based hunting
 </details>
@@ -210,7 +212,7 @@ No virtual router required for this path — all VMs sit on one flat, isolated n
 
 - Run a chained sequence to simulate a real intrusion: `T1204.002` (user opens a malicious document, simulated manually) → `T1059.001` (PowerShell execution) → `T1547.001` (Registry Run Key persistence).
 - Practice the full IR lifecycle against it:
-  - **Detection**: SIEM alert fires from your Day 5 rules.
+  - **Detection**: export the relevant log channel, run Zircolite with your Day 5 rules, confirm the match.
   - **Triage**: assign a severity using a simple matrix (asset criticality × technique impact).
   - **Containment**: isolate the VM — detach its vNIC or move its port group to a "quarantine" segment with no connectivity.
   - **Eradication**: remove the persistence registry key, kill the malicious process.
@@ -233,6 +235,7 @@ No virtual router required for this path — all VMs sit on one flat, isolated n
   This pulls Prefetch, Event Logs, registry hives, MFT, USN Journal, Amcache, and ShimCache in one pass.
 - Load the collected artifacts into **Autopsy**: create a new case, add the disk image/logical files, and explore the Registry Explorer and timeline modules.
 - Specifically check: `SYSTEM`/`SOFTWARE` hives for Run keys, `Amcache.hve` for execution evidence, and `.pf` Prefetch files for execution timestamps.
+- Once you've extracted what you need, move the raw memory dump and disk image off the VM's own disk (external drive or delete after copying findings into your notebook) — these files are large and don't need to live in the lab long-term.
 
 **Covers:** Evidence collection, chain of custody, Windows forensics
 </details>
@@ -279,10 +282,11 @@ No virtual router required for this path — all VMs sit on one flat, isolated n
 <details>
 <summary><strong>Day 12 — Network Security Monitoring</strong></summary>
 
-- Enable **promiscuous mode** on your isolated port group (in ESXi: Security policy → Promiscuous Mode → Accept) so a monitoring VM can see all lab traffic.
-- Deploy **Suricata** or **Zeek** on a dedicated monitoring VM attached to that segment, running in IDS mode with the free **ET Open** ruleset.
+- Enable **promiscuous mode** on your isolated port group (in ESXi: Security policy → Promiscuous Mode → Accept) so traffic can be observed.
+- Run **Suricata** or **Zeek** temporarily on the **Kali VM** (no dedicated monitoring VM needed) in IDS mode with the free **ET Open** ruleset, attached to the isolated segment.
 - Re-run one of your earlier Atomic tests (Day 4 or 7) while capturing with **Wireshark** simultaneously.
 - Correlate any Suricata/Zeek alert back to the exact packets in the Wireshark capture using the alert's timestamp and 5-tuple (src/dst IP and port, protocol).
+- Delete large `.pcap` captures once you've pulled out the relevant packets/screenshots for your notebook.
 
 **Covers:** Network traffic analysis, IDS, network artifacts
 </details>
@@ -318,13 +322,13 @@ No virtual router required for this path — all VMs sit on one flat, isolated n
 
 ## 🐢 Low-Spec Mode
 
-Got 8GB RAM or less? Run one VM at a time: attack the Windows VM, export logs, shut it down, then bring up the SIEM VM to ingest and analyze. Slower, but every exercise stays doable.
+Got 8GB RAM or less, or very limited disk space? Run one VM at a time: attack the Windows VM, export logs, shut it down, then bring up whichever VM you need next to run Zircolite/hunt/analyze. Since there's no always-on SIEM server to keep running, this mode fits naturally with the architecture — slower, but every exercise stays doable.
 
 ---
 
 ## ⚠️ Note on Scope
 
-This path doesn't cover cloud security monitoring (AWS/Azure/GCP logging) or full SOAR automation — those need paid cloud accounts or enterprise tooling. A **Phase 2** using free-tier AWS/Azure logging may follow as a future CyberAtaraxia Careers entry.
+This path doesn't cover cloud security monitoring (AWS/Azure/GCP logging), full SOAR automation, or centralized multi-host SIEM operation (correlating alerts live across many hosts) — those need paid cloud accounts, enterprise tooling, or more storage/compute than a 3-VM home lab. If you later have the disk space for a 4th VM, adding Wazuh or Security Onion back in as a **Phase 2 upgrade** is a natural next step once the fundamentals here are solid. A **Phase 2** using free-tier AWS/Azure logging may also follow as a future CyberAtaraxia Careers entry.
 
 ---
 
