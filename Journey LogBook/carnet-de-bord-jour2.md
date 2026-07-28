@@ -21,113 +21,94 @@
 
 ## ✅ Ce qui a été fait aujourd'hui
 
-<details>
-<summary><strong>1. Sysmon sur la VM Windows (Tiny10)</strong></summary>
-
-- Téléchargé Sysmon (Sysinternals) + config communautaire SwiftOnSecurity (`sysmonconfig.xml`).
-- Installé avec :
-  ```
-  sysmon64.exe -accepteula -i sysmonconfig.xml
-  ```
-- Vérifié que le service tourne (`sc query Sysmon64`) et que les événements arrivent (`wevtutil qe Microsoft-Windows-Sysmon/Operational /c:5 /f:text`).
-
-**Résultat :** télémétrie riche activée (création de process, connexions réseau, modifications de registre, etc.) au lieu du logging Windows par défaut.
-
-</details>
-
-<details>
-<summary><strong>2. auditd sur la VM Ubuntu Server</strong></summary>
-
-- Installé et activé auditd :
-  ```
-  sudo apt install auditd audispd-plugins -y
-  sudo systemctl enable --now auditd
-  ```
-- Ajouté les règles dans `/etc/audit/rules.d/soc-lab.rules` : surveillance de `/etc/passwd`, `/etc/shadow`, `/etc/sudoers`, exécutions (`execve`), modules kernel.
-- Chargé et vérifié les règles : `sudo augenrules --load` / `sudo auditctl -l`.
-
-**Résultat :** visibilité sur les fichiers sensibles et les exécutions côté Linux.
-
-</details>
-
-<details>
-<summary><strong>3. Limitation de la taille des logs</strong></summary>
-
-- **Windows (Tiny10)** : plafonné les canaux Security/System/Application à 50 Mo et Sysmon à 100 Mo (`wevtutil sl ... /ms:...`).
-- **Ubuntu Server** : configuré la rotation dans `/etc/audit/auditd.conf` (`max_log_file = 50`, `num_logs = 5`, `max_log_file_action = ROTATE`).
-
-**Résultat :** pas de risque de saturation disque pendant les 14 jours du lab.
-
-</details>
-
-<details>
-<summary><strong>4. Installation de Zircolite (moteur de détection local, sur Kali)</strong></summary>
-
-- Cloné le dépôt officiel : `git clone https://github.com/wagga40/Zircolite.git`
-- Créé un environnement virtuel Python (`python3 -m venv .venv`) et installé les dépendances (`pip install -r requirements.txt`).
-
-**Résultat :** moteur de détection Sigma opérationnel, sans serveur ni agent — voir incident de parcours ci-dessous.
-
-</details>
-
-<details>
-<summary><strong>5. Premier test de détection</strong></summary>
-
-- Export des logs Windows en EVTX :
-  ```
-  wevtutil epl Microsoft-Windows-Sysmon/Operational C:\temp\sysmon_export.evtx
-  ```
-- Transfert du fichier `.evtx` de Tiny10 vers Kali.
-- Analyse avec Zircolite :
-  ```
-  python3 zircolite.py -e ~/sysmon_export.evtx -o ~/resultat_sysmon.json
-  ```
-
-**Résultat obtenu :**
-
-| Métrique | Valeur |
-|---|---|
-| Règles Sigma chargées | 2171 |
-| Événements traités | 252 (37 filtrés) |
-| Détections | 1 (MEDIUM) |
-| Règle matchée | *Sysmon Configuration Change* |
-| Durée | 0.4s |
-
-✅ La chaîne complète fonctionne : **Sysmon → export EVTX → Zircolite → alerte Sigma.**
-
-La détection obtenue (changement de config Sysmon) est cohérente : elle correspond simplement à l'installation de Sysmon faite plus tôt dans la journée — pas une vraie anomalie, mais la preuve que le pipeline détecte bien des événements réels.
-
-</details>
-
-<details>
-<summary><strong>6. Finalisation</strong></summary>
-
-- VMs remises sur le segment réseau isolé (plus d'uplink Internet).
-- Connectivité vérifiée : ping OK entre les 3 VMs, ping vers `8.8.8.8` en échec (isolation confirmée).
-- Snapshot pris : `day2-logs-ready`.
-
-</details>
-
+L'objectif du jour était de sortir de l'aveuglement total : par défaut, ni Windows ni Linux ne loggent grand-chose d'exploitable pour de la détection. Aujourd'hui, je devais mettre en place une vraie source de télémétrie sur mes deux VMs victimes, contrôler que ces logs ne vont pas exploser en taille, puis installer un moteur capable de transformer ces logs bruts en alertes concrètes — sans passer par un SIEM lourd type Wazuh, puisque je n'ai pas la place pour une 4e VM.
+ 
+### Sysmon sur la VM Windows (Tiny10)
+ 
+J'ai commencé par la VM Windows. J'ai téléchargé Sysmon depuis Sysinternals, ainsi qu'une configuration communautaire toute faite (celle de SwiftOnSecurity), que j'ai enregistrée sous `sysmonconfig.xml`. Sans cette config, Sysmon logge un peu n'importe quoi ou pas grand-chose d'utile — la config SwiftOnSecurity est un bon point de départ standard dans l'industrie.
+ 
+J'ai installé Sysmon avec :
+ 
+```
+sysmon64.exe -accepteula -i sysmonconfig.xml
+```
+ 
+Puis j'ai vérifié deux choses : que le service tournait bien (`sc query Sysmon64`), et que des événements arrivaient réellement dans le journal (`wevtutil qe Microsoft-Windows-Sysmon/Operational /c:5 /f:text`). Les deux vérifications étaient bonnes — Sysmon me donne maintenant une télémétrie beaucoup plus riche que le logging Windows par défaut : création de processus, connexions réseau, modifications de registre, etc.
+ 
+### auditd sur la VM Ubuntu Server
+ 
+Côté Linux, l'équivalent de Sysmon, c'est auditd. Je l'ai installé et activé :
+ 
+```
+sudo apt install auditd audispd-plugins -y
+sudo systemctl enable --now auditd
+```
+ 
+Ensuite j'ai écrit un fichier de règles dans `/etc/audit/rules.d/soc-lab.rules`, pour surveiller ce qui compte vraiment pour un lab SOC : les fichiers liés à l'identité (`/etc/passwd`, `/etc/shadow`, `/etc/sudoers`), toutes les exécutions de commandes (via `execve`), et le chargement de modules kernel. J'ai chargé ces règles avec `sudo augenrules --load` et vérifié qu'elles étaient bien actives avec `sudo auditctl -l`.
+ 
+### Limiter la croissance des logs
+ 
+Avant d'aller plus loin, je me suis occupé d'un point pratique mais important : sans limite, les logs peuvent remplir un disque en quelques jours, et je n'ai pas beaucoup de marge de stockage. Sur Windows, j'ai plafonné la taille des canaux Security/System/Application à 50 Mo chacun, et le canal Sysmon (plus verbeux) à 100 Mo, avec `wevtutil sl <canal> /ms:<octets>`. Sur Ubuntu, j'ai configuré la rotation dans `/etc/audit/auditd.conf` (`max_log_file = 50`, `num_logs = 5`, `max_log_file_action = ROTATE`) pour que les vieux logs soient automatiquement écrasés au lieu de s'accumuler.
+ 
+### Installer Zircolite sur Kali
+ 
+C'est ici que j'ai remplacé l'idée d'un SIEM centralisé par une approche plus légère. J'ai installé **Zircolite** sur ma VM Kali : un outil qui applique des règles Sigma directement sur des fichiers de logs exportés (EVTX pour Windows, JSON pour auditd), sans avoir besoin d'un serveur ni d'un agent installé sur les victimes.
+ 
+L'installation s'est faite via git :
+ 
+```
+git clone https://github.com/wagga40/Zircolite.git
+cd Zircolite
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+ 
+C'est à cette étape que j'ai eu mon seul vrai accroc de la journée (détaillé plus bas dans la section Troubleshooting) : j'avais fait cette installation en root la première fois, ce qui a créé des soucis. Une fois corrigé, tout s'est enchaîné normalement.
+ 
+### Premier test de détection
+ 
+Une fois Zircolite opérationnel, je suis passé au test qui devait valider toute la chaîne : est-ce que je suis capable d'aller d'un événement réel sur Windows jusqu'à une alerte concrète ?
+ 
+J'ai d'abord exporté le canal Sysmon de Windows en EVTX :
+ 
+```
+wevtutil epl Microsoft-Windows-Sysmon/Operational C:\temp\sysmon_export.evtx
+```
+ 
+J'ai transféré ce fichier de Tiny10 vers Kali, puis lancé Zircolite dessus :
+ 
+```
+python3 zircolite.py -e ~/sysmon_export.evtx -o ~/resultat_sysmon.json
+```
+ 
+Le résultat a été concluant : Zircolite a chargé 2171 règles Sigma par défaut, traité 252 événements (37 filtrés), et m'a sorti **1 détection de niveau MEDIUM** : une règle appelée *Sysmon Configuration Change*. Le tout en 0.4 seconde.
+ 
+Cette alerte n'a rien d'inquiétant en soi — elle correspond simplement au fait que je venais d'installer/configurer Sysmon un peu plus tôt dans la journée. Mais c'est exactement ce que je voulais voir : la preuve que la chaîne complète fonctionne de bout en bout, **Sysmon → export EVTX → Zircolite → alerte Sigma**, sans avoir eu besoin d'un SIEM centralisé.
+ 
+### Finalisation
+ 
+Pour terminer la journée, j'ai remis les trois VMs sur le segment réseau isolé, revérifié que le ping fonctionnait bien entre elles et que rien ne pouvait sortir vers Internet, puis j'ai pris un snapshot nommé `day2-logs-ready`.
+ 
 ---
-
-## 🐛 Troubleshooting
-
-### Erreur : conflits de permissions/répertoire avec Zircolite
-
-**Contexte :** Zircolite avait été installé une première fois en tant qu'utilisateur **root**.
-
-**Symptôme :** confusion entre les chemins `~/` et `/root/` — les commandes cherchaient/écrivaient les fichiers au mauvais endroit selon l'utilisateur actif, provoquant des erreurs de permission et des chemins introuvables.
-
-**Cause racine :** un `git clone` fait en root crée les fichiers avec un propriétaire et un chemin home différents (`/root/Zircolite`) de ceux de l'utilisateur normal (`/home/kali/Zircolite`). Toute commande lancée ensuite en utilisateur normal ne retrouve donc pas les mêmes fichiers, d'où la confusion de répertoire.
-
-**Résolution :**
-1. Suppression complète du dossier Zircolite installé en root.
-2. `exit` de la session root pour revenir à l'utilisateur normal (`kali`).
-3. Réinstallation propre avec `git clone` en tant qu'utilisateur normal (pas de `sudo`).
-
-**Résultat :** plus aucune erreur de permission ensuite ; tous les tests (étape 5) se sont déroulés sans problème.
-
-**Leçon retenue :** ne jamais installer d'outils utilisateur (Zircolite, environnements Python, etc.) en root sauf nécessité explicite — toujours travailler avec un utilisateur normal pour éviter les conflits de propriété de fichiers et de chemins home.
+ 
+## Comment ça s'est passé
+ 
+La journée s'est globalement bien passée, avec un seul vrai problème rencontré, au moment de l'installation de Zircolite.
+ 
+### Le problème : installation de Zircolite en root
+ 
+J'avais installé Zircolite une première fois en étant connecté en tant que root sur Kali. Ça a très vite créé des erreurs de permissions et des confusions de répertoire — en gros, mes commandes tantôt cherchaient les fichiers dans `~/` (mon home normal, `/home/kali`), tantôt dans `/root/`, selon l'utilisateur avec lequel j'étais connecté au moment de la commande. Résultat : des fichiers introuvables, des erreurs de permission, une vraie confusion.
+ 
+En creusant, la cause est logique : un `git clone` lancé en root crée tous les fichiers dans `/root/Zircolite`, avec le propriétaire `root`. Si je reviens ensuite à mon utilisateur normal (`kali`) pour lancer les commandes, je n'ai évidemment plus accès à ces mêmes fichiers de la même façon, et surtout mon `~/` ne pointe plus vers le même dossier.
+ 
+Pour corriger ça, j'ai :
+1. Supprimé complètement le dossier Zircolite installé en root.
+2. Fait un `exit` pour sortir de la session root et revenir à mon utilisateur normal.
+3. Réinstallé Zircolite proprement avec `git clone`, cette fois en tant qu'utilisateur normal, sans `sudo`.
+Après ça, plus aucune erreur — toute la partie test (export, transfert, analyse) s'est déroulée sans accroc.
+ 
+**Ce que je retiens :** ne plus jamais installer d'outils "utilisateur" comme Zircolite en root. Je dois rester sur mon compte normal pour ce genre d'installation, sauf si l'outil l'exige vraiment — sinon je m'expose à exactement ce genre de confusion de chemins.
 
 ---
 
