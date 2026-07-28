@@ -12,7 +12,7 @@
 
 ## 🧭 Contexte
 
-**Date :** [à compléter]
+**Date :** 27/07/2026
 **Objectif du jour :** monter l'infrastructure de base du home lab — hyperviseur, réseau isolé, 3 VMs provisionnées et patchées, snapshot de référence.
 
 **Environnement du lab :**
