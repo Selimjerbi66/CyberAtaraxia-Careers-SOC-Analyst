@@ -12,7 +12,7 @@
 
 ## 🧭 Contexte
 
-**Date :** [à compléter]
+**Date :** 28/07/2026
 **Objectif du jour :** activer une télémétrie riche sur les VMs victimes (Sysmon/auditd), contrôler la volumétrie des logs, installer un moteur de détection local (Zircolite) et valider la chaîne complète avec un premier test.
 
 **Environnement du lab :** Kali (`kali`/`kali`), Ubuntu Server (`victim`/`victim`), Tiny10 (`victim`/`victim`) — voir carnet Jour 1 pour le détail de l'architecture.
