@@ -104,7 +104,7 @@ J'utilise la version portable de FileZilla Client, téléchargeable ici : [Downl
 
 Connexion : `sftp://kali@192.168.77.10`, dossier distant `/home/kali/Downloads`. Le transfert s'est fait sans problème — capture d'écran à l'appui ci-dessous :
 
-![Transfert FileZilla du fichier de routines vers Kali](https://raw.githubusercontent.com/Selimjerbi66/CyberAtaraxia-Careers-SOC-Analyst/main/Journey%20LogBook/Screenshots/filezilla-transfert-jour3.png)
+![Transfert FileZilla du fichier de routines vers Kali](https://raw.githubusercontent.com/Selimjerbi66/CyberAtaraxia-Careers-SOC-Analyst/main/Screenshots/filezilla-transfert-jour3.png)
 
 ---
 
