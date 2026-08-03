@@ -58,7 +58,7 @@ Résultat excellent : Sysmon a capturé **la totalité de la chaîne d'attaque**
 
 ### Test 2 — T1003.001 (OS Credential Dumping: LSASS Memory via ProcDump)
 
-**Premier essai — échec :**
+**Premier essai — échec (la protection en temps réel a été réactivée automatiquement) :**
 ```
 Exception calling "Start" with "0" argument(s): "Access is denied"
 ```
