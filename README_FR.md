@@ -341,7 +341,7 @@ Ce parcours ne couvre pas la surveillance de sécurité cloud (logging AWS/Azure
 
 <p align="center">
   <a href="https://linkedin.com/in/selim-jerbi-b355a0202">
-    <img src="https://img.shields.io/badge/LinkedIn-Connexion-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" />
+    <img src="https://img.shields.io/badge/LinkedIn-Connect%20with-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" />
   </a>
   &nbsp;
   <a href="mailto:selimjerbi@gmail.com">
