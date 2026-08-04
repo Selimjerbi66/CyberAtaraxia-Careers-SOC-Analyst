@@ -344,7 +344,7 @@ Ce parcours ne couvre pas la surveillance de sécurité cloud (logging AWS/Azure
     <img src="https://img.shields.io/badge/LinkedIn-Connect%20with-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" />
   </a>
   &nbsp;
-  <a href="mailto:selimjerbi@gmail.com">
+  <a href="mailto:selimjerbi66@gmail.com">
     <img src="https://img.shields.io/badge/Gmail-Contact-D14836?style=for-the-badge&logo=gmail&logoColor=white" />
   </a>
 </p>
