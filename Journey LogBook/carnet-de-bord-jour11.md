@@ -123,7 +123,7 @@ Ces imports montrent clairement des capacités de communication réseau et de ma
 
 ---
 
-### Tableau des IOC extraits (Étape 6)
+### Tableau des IOC extraits
 
 | IOC              | Valeur                                                                 |
 |------------------|------------------------------------------------------------------------|
@@ -139,7 +139,7 @@ Ces imports montrent clairement des capacités de communication réseau et de ma
 
 ---
 
-### Réponses aux questions de l’étape 8
+### Réflexions
 
 **Quel est le SHA256 ?**  
 `11f14d6270f713437c36e92de64afa6f3149ff35e11f3a6f59346ffde45e8328`
@@ -193,7 +193,7 @@ L’analyse dynamique a volontairement été ignorée (étape indiquée comme op
 - [x] Analyse de l’en-tête et des sections (`readelf`)  
 - [x] Analyse des imports dynamiques (`objdump -T`)  
 - [x] Extraction et documentation des IOC  
-- [x] Réponses aux questions d’analyse de l’étape 8  
+- [x] Réflexions  
 - [x] Analyse dynamique volontairement non réalisée (optionnelle)
 
 ---
