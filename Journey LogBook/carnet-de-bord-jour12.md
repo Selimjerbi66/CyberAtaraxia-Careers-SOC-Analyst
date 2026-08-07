@@ -13,6 +13,7 @@
 ## 🧭 Contexte
 
 **Date :** 06-07/08/2026
+
 **Objectif du jour :** activer le mode promiscuous sur le segment isolé, déployer Suricata en mode IDS avec le ruleset ET Open sur Kali, capturer du trafic avec Wireshark en parallèle, puis corréler toute alerte générée avec les paquets exacts observés.
 
 **Environnement du lab :** Kali (`10.10.10.30`), Tiny10 (`10.10.10.10`), Ubuntu Server (`10.10.10.20`) — voir carnet Jour 1 pour le détail de l'architecture.
