@@ -5,6 +5,7 @@
 ### Jour 13 — Enrichissement en Threat Intelligence
 
 Partie du parcours CyberAtaraxia Careers — SOC Analyst
+</div>
 
 ---
 
